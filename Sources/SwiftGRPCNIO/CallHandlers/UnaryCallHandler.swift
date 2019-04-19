@@ -7,7 +7,7 @@ import NIOHTTP1
 ///
 /// - The observer block is implemented by the framework user and returns a future containing the call result.
 /// - To return a response to the client, the framework user should complete that future
-/// (similar to e.g. serving regular HTTP requests in frameworks such as Vapor).
+///   (similar to e.g. serving regular HTTP requests in frameworks such as Vapor).
 public class UnaryCallHandler<RequestMessage: Message, ResponseMessage: Message>: BaseCallHandler<RequestMessage, ResponseMessage> {
   public typealias EventObserver = (RequestMessage) -> EventLoopFuture<ResponseMessage>
   private var eventObserver: EventObserver?
@@ -29,7 +29,7 @@ public class UnaryCallHandler<RequestMessage: Message, ResponseMessage: Message>
   public override func processMessage(_ message: RequestMessage) throws {
     guard let eventObserver = self.eventObserver,
       let context = self.context else {
-      throw GRPCError.server(.requestCardinalityViolation)
+      throw GRPCError.server(.tooManyRequests)
     }
     
     let resultFuture = eventObserver(message)
@@ -37,5 +37,15 @@ public class UnaryCallHandler<RequestMessage: Message, ResponseMessage: Message>
       // Fulfill the response promise with whatever response (or error) the framework user has provided.
       .cascade(promise: context.responsePromise)
     self.eventObserver = nil
+  }
+  
+  public override func endOfStreamReceived() throws {
+    if self.eventObserver != nil {
+      throw GRPCError.server(.noRequestsButOneExpected)
+    }
+  }
+  
+  override func sendErrorStatus(_ status: GRPCStatus) {
+    context?.responsePromise.fail(error: status)
   }
 }

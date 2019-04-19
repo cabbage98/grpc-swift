@@ -39,7 +39,7 @@ Then, run `pod install` from command line and use your project's generated
 
 ## Manual integration
 
-When not using CocoaPods, Swift gRPC includes **vendored copies** of the
+When not using CocoaPods, Swift gRPC includes **[vendored copies](./scripts/vendor-all.sh)** of the
 gRPC Core library and BoringSSL (an OpenSSL fork that is used by
 the gRPC Core). These are built automatically in Swift Package
 Manager builds.
@@ -102,8 +102,10 @@ separated from the output directory by a colon.
 | `Client` |  `true`/`false` | `true` | Whether to generate client code |
 | `Async` |  `true`/`false` | `true` | Whether to generate asynchronous code |
 | `Sync` |  `true`/`false` | `true` | Whether to generate synchronous code |
+| `Implementations` |  `true`/`false` | `true` | Whether to generate protocols and non-test service code. Toggling this to `false` is mostly useful when combined with `TestStubs=true` to generate files containing only test stub code |
 | `TestStubs` |  `true`/`false` | `false` | Whether to generate test stub code |
 | `FileNaming` | `FullPath`/`PathToUnderscores`/`DropPath` | `FullPath` | How to handle the naming of generated sources |
+| `ExtraModuleImports` |  `String` | `` | Extra module to import in generated code. This parameter may be included multiple times to import more than one module |
 
 Example:
 
@@ -165,9 +167,9 @@ Original SwiftGRPC issue: https://github.com/grpc/grpc-swift/issues/337.
 grpc-swift depends on Swift, Xcode, and swift-protobuf. We are currently
 testing with the following versions:
 
-- Xcode 9.1
-- Swift 4.0
-- swift-protobuf 1.3.1
+- Xcode 10.2
+- Swift 4.2 / 5.0
+- swift-protobuf 1.5.0
 
 ## `SwiftGRPCNIO` package
 

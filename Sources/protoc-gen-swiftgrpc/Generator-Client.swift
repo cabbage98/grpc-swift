@@ -52,10 +52,25 @@ extension Generator {
     println()
     printServiceClientImplementation(asynchronousCode: asynchronousCode,
                                      synchronousCode: synchronousCode)
-    if options.generateTestStubs {
-      println()
-      printServiceClientTestStubs()
+  }
+
+  func printCGRPCClientTestStubs(asynchronousCode: Bool,
+                                 synchronousCode: Bool) {
+    for method in service.methods {
+      self.method = method
+      switch streamingType(method) {
+      case .unary:
+        printServiceClientMethodCallUnaryTestStub()
+      case .serverStreaming:
+        printServiceClientMethodCallServerStreamingTestStub()
+      case .clientStreaming:
+        printServiceClientMethodCallClientStreamingTestStub()
+      case .bidirectionalStreaming:
+        printServiceClientMethodCallBidiStreamingTestStub()
+      }
     }
+    println()
+    printServiceClientTestStubs(asynchronousCode: asynchronousCode, synchronousCode: synchronousCode)
   }
 
   private func printServiceClientMethodCallUnary() {
@@ -67,6 +82,15 @@ extension Generator {
     outdent()
     println("}")
     println()
+  }
+
+  private func printServiceClientMethodCallUnaryTestStub() {
+    println()
+    println("class \(callName)TestStub: ClientCallUnaryTestStub, \(callName) {")
+    indent()
+    println("override class var method: String { return \(methodPath) }")
+    outdent()
+    println("}")
   }
 
   private func printServiceClientMethodCallServerStreaming() {
@@ -83,15 +107,16 @@ extension Generator {
     println("override class var method: String { return \(methodPath) }")
     outdent()
     println("}")
-    if options.generateTestStubs {
-      println()
-      println("class \(callName)TestStub: ClientCallServerStreamingTestStub<\(methodOutputName)>, \(callName) {")
-      indent()
-      println("override class var method: String { return \(methodPath) }")
-      outdent()
-      println("}")
-    }
     println()
+  }
+
+  private func printServiceClientMethodCallServerStreamingTestStub() {
+    println()
+    println("class \(callName)TestStub: ClientCallServerStreamingTestStub<\(methodOutputName)>, \(callName) {")
+    indent()
+    println("override class var method: String { return \(methodPath) }")
+    outdent()
+    println("}")
   }
 
   private func printServiceClientMethodCallClientStreaming() {
@@ -113,17 +138,18 @@ extension Generator {
     println("override class var method: String { return \(methodPath) }")
     outdent()
     println("}")
-    if options.generateTestStubs {
-      println()
-      println("/// Simple fake implementation of \(callName)")
-      println("/// stores sent values for later verification and finall returns a previously-defined result.")
-      println("class \(callName)TestStub: ClientCallClientStreamingTestStub<\(methodInputName), \(methodOutputName)>, \(callName) {")
-      indent()
-      println("override class var method: String { return \(methodPath) }")
-      outdent()
-      println("}")
-    }
     println()
+  }
+
+  private func printServiceClientMethodCallClientStreamingTestStub() {
+    println()
+    println("/// Simple fake implementation of \(callName)")
+    println("/// stores sent values for later verification and finall returns a previously-defined result.")
+    println("class \(callName)TestStub: ClientCallClientStreamingTestStub<\(methodInputName), \(methodOutputName)>, \(callName) {")
+    indent()
+    println("override class var method: String { return \(methodPath) }")
+    outdent()
+    println("}")
   }
 
   private func printServiceClientMethodCallBidiStreaming() {
@@ -149,15 +175,16 @@ extension Generator {
     println("override class var method: String { return \(methodPath) }")
     outdent()
     println("}")
-    if options.generateTestStubs {
-      println()
-      println("class \(callName)TestStub: ClientCallBidirectionalStreamingTestStub<\(methodInputName), \(methodOutputName)>, \(callName) {")
-      indent()
-      println("override class var method: String { return \(methodPath) }")
-      outdent()
-      println("}")
-    }
     println()
+  }
+
+  private func printServiceClientMethodCallBidiStreamingTestStub() {
+    println()
+    println("class \(callName)TestStub: ClientCallBidirectionalStreamingTestStub<\(methodInputName), \(methodOutputName)>, \(callName) {")
+    indent()
+    println("override class var method: String { return \(methodPath) }")
+    outdent()
+    println("}")
   }
 
   private func printServiceClientProtocol(asynchronousCode: Bool,
@@ -175,6 +202,7 @@ extension Generator {
         }
         if asynchronousCode {
           println("/// Asynchronous. Unary.")
+          println("@discardableResult")
           println("func \(methodFunctionName)(_ request: \(methodInputName), metadata customMetadata: Metadata, completion: @escaping (\(methodOutputName)?, CallResult) -> Void) throws -> \(callName)")
         }
       case .serverStreaming:
@@ -217,6 +245,7 @@ extension Generator {
         }
         if asynchronousCode {
           println("/// Asynchronous. Unary.")
+          println("@discardableResult")
           println("func \(methodFunctionName)(_ request: \(methodInputName), completion: @escaping (\(methodOutputName)?, CallResult) -> Void) throws -> \(callName) {")
           indent()
           println("return try self.\(methodFunctionName)(request, metadata: self.metadata, completion: completion)")
@@ -272,6 +301,7 @@ extension Generator {
         }
         if asynchronousCode {
           println("/// Asynchronous. Unary.")
+          println("@discardableResult")
           println("\(access) func \(methodFunctionName)(_ request: \(methodInputName), metadata customMetadata: Metadata, completion: @escaping (\(methodOutputName)?, CallResult) -> Void) throws -> \(callName) {")
           indent()
           println("return try \(callName)Base(channel)")
@@ -324,7 +354,8 @@ extension Generator {
     println("}")
   }
 
-  private func printServiceClientTestStubs() {
+  private func printServiceClientTestStubs(asynchronousCode: Bool,
+                                           synchronousCode: Bool) {
     println("class \(serviceClassName)TestStub: ServiceClientTestStubBase, \(serviceClassName) {")
     indent()
     for method in service.methods {
@@ -333,18 +364,26 @@ extension Generator {
       case .unary:
         println("var \(methodFunctionName)Requests: [\(methodInputName)] = []")
         println("var \(methodFunctionName)Responses: [\(methodOutputName)] = []")
-        println("func \(methodFunctionName)(_ request: \(methodInputName), metadata customMetadata: Metadata) throws -> \(methodOutputName) {")
-        indent()
-        println("\(methodFunctionName)Requests.append(request)")
-        println("defer { \(methodFunctionName)Responses.removeFirst() }")
-        println("return \(methodFunctionName)Responses.first!")
-        outdent()
-        println("}")
-        println("func \(methodFunctionName)(_ request: \(methodInputName), metadata customMetadata: Metadata, completion: @escaping (\(methodOutputName)?, CallResult) -> Void) throws -> \(callName) {")
-        indent()
-        println("fatalError(\"not implemented\")")
-        outdent()
-        println("}")
+        if synchronousCode {
+          println("func \(methodFunctionName)(_ request: \(methodInputName), metadata customMetadata: Metadata) throws -> \(methodOutputName) {")
+          indent()
+          println("\(methodFunctionName)Requests.append(request)")
+          println("defer { \(methodFunctionName)Responses.removeFirst() }")
+          println("return \(methodFunctionName)Responses.first!")
+          outdent()
+          println("}")
+        }
+        if asynchronousCode {
+          println("@discardableResult")
+          println("func \(methodFunctionName)(_ request: \(methodInputName), metadata customMetadata: Metadata, completion: @escaping (\(methodOutputName)?, CallResult) -> Void) throws -> \(callName) {")
+          indent()
+          println("let response = try self.\(methodFunctionName)(request)")
+          println("let callResult = CallResult(success: true, statusCode: .ok, statusMessage: \"OK\", resultData: nil, initialMetadata: nil, trailingMetadata: nil)")
+          println("completion(response, callResult)")
+          println("return \(callName)TestStub()")
+          outdent()
+          println("}")
+        }
       case .serverStreaming:
         println("var \(methodFunctionName)Requests: [\(methodInputName)] = []")
         println("var \(methodFunctionName)Calls: [\(callName)] = []")

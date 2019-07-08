@@ -11,7 +11,7 @@
 
 Pod::Spec.new do |s|
   s.name = 'SwiftGRPC'
-  s.version = '0.9.0'
+  s.version = '0.9.1'
   s.license     = { :type => 'Apache License, Version 2.0',
                     :text => <<-LICENSE
                       Copyright 2018, gRPC Authors. All rights reserved.
@@ -32,9 +32,11 @@ Pod::Spec.new do |s|
   s.authors  = { 'The gRPC contributors' => 'grpc-packages@google.com' }
   s.source = { :git => 'https://github.com/grpc/grpc-swift.git', :tag => s.version }
 
+  s.swift_versions = [4.2]
   s.requires_arc = true
   s.ios.deployment_target = '8.0'
   s.osx.deployment_target = '10.10'
+  s.tvos.deployment_target = '10.0'
 
   s.source_files = 'Sources/SwiftGRPC/*.swift', 'Sources/SwiftGRPC/**/*.swift', 'Sources/CgRPC/shim/*.[ch]'
   s.public_header_files = 'Sources/CgRPC/shim/cgrpc.h'
